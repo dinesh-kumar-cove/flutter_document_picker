@@ -29,10 +29,11 @@ class FlutterDocumentPickerDelegate(
     private var allowedFileExtensions: Array<String>? = null
     private var invalidFileNameSymbols: Array<String>? = null
 
-    fun pickDocument(result: MethodChannel.Result,
-                     allowedFileExtensions: Array<String>?,
-                     allowedMimeTypes: Array<String>?,
-                     invalidFileNameSymbols: Array<String>?
+    fun pickDocument(
+        result: MethodChannel.Result,
+        allowedFileExtensions: Array<String>?,
+        allowedMimeTypes: Array<String>?,
+        invalidFileNameSymbols: Array<String>?
     ) {
         channelResult = result
         this.allowedFileExtensions = allowedFileExtensions
@@ -64,10 +65,18 @@ class FlutterDocumentPickerDelegate(
                     if (allowedFileExtensions != null && !allowedFileExtensions.contains(params.extension)) {
                         channelResult?.error("extension_mismatch", "Picked file extension mismatch!", params.extension)
                     } else {
-                        startLoader(params)
+                        try {
+                            startLoader(params)
+                        } catch (e: Exception) {
+                            channelResult?.error("Error", "Exception $e", null)
+                        }
                     }
                 } else {
-                    channelResult?.success(null)
+                    try {
+                        channelResult?.success(null)
+                    } catch (e: Exception) {
+                        channelResult?.error("Error", "Exception $e", null)
+                    }
                 }
                 return true
             }
@@ -98,12 +107,16 @@ class FlutterDocumentPickerDelegate(
     }
 
     override fun onLoadFinished(loader: Loader<FileCopyTaskLoaderResult>?, data: FileCopyTaskLoaderResult) {
-        if(data.isSuccess()) {
-            channelResult?.success(data.result)
-        } else {
-            channelResult?.error("LOAD_FAILED", data.error.toString(), null)
+        try {
+            if (data.isSuccess()) {
+                channelResult?.success(data.result)
+            } else {
+                channelResult?.error("LOAD_FAILED", data.error.toString(), null)
+            }
+            activity.loaderManager.destroyLoader(LOADER_FILE_COPY)
+        } catch (e: java.lang.Exception) {
+            channelResult?.error("Error", "Exception $e", null)
         }
-        activity.loaderManager.destroyLoader(LOADER_FILE_COPY)
     }
 
     override fun onLoaderReset(loader: Loader<FileCopyTaskLoaderResult>?) {
